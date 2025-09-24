@@ -195,20 +195,12 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
     const processedRows = Object.values(ticketGroups).map(ticket => {
       console.log('DB ticket_round_date ->', ticket.ticket_round_date);
       console.log('Latest draw date ->', latestDrawDate);
-
+    
       // ✅ แปลงเป็น YYYY-MM-DD ก่อนเปรียบเทียบ
       const roundDateStr = new Date(ticket.ticket_round_date).toISOString().split('T')[0];
       const latestDrawStr = new Date(latestDrawDate).toISOString().split('T')[0];
       const canCheck = roundDateStr === latestDrawStr;
-          
-      // Calculate display date: if time is 00:00:00, show next day
-      const originalDate = new Date(ticket.original_round_date);
-      let displayDate = new Date(originalDate);
-
-      const roundDate = ticket.ticket_round_date;
-      const canCheck = roundDate === latestDrawDate;
-      
-      // Determine result status
+    
       let resultStatus = 'pending';
       if (ticket.redemption_id) {
         resultStatus = 'claimed';
@@ -217,18 +209,17 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
       } else if (ticket.ticket_status === 'drawn') {
         resultStatus = 'lost';
       }
-      
-      // Calculate total winning amount
+    
       const totalWinningAmount = ticket.prizes.reduce((sum, prize) => sum + (prize.winning_amount || 0), 0);
-      
-      console.log(`🎫 Ticket ${ticket.number_6}: roundDate="${roundDate}", latestDrawDate="${latestDrawDate}", canCheck=${canCheck}, prizes=${ticket.prizes.length}`);;
-
+    
+      console.log(`🎫 Ticket ${ticket.number_6}: roundDate="${roundDateStr}", latestDrawDate="${latestDrawStr}", canCheck=${canCheck}, prizes=${ticket.prizes.length}`);
+    
       return {
         purchase_id: ticket.purchase_id,
         ticket_id: ticket.ticket_id,
         number_6: ticket.number_6,
         ticket_status: ticket.ticket_status,
-        round_date: roundDate,
+        round_date: roundDateStr,
         purchase_price: ticket.purchase_price,
         purchased_at: ticket.purchased_at,
         result_status: resultStatus,
@@ -240,7 +231,7 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
         can_check: canCheck
       };
     });
-
+    
     // Group by round_date for better organization
     const groupedByRound = {};
     processedRows.forEach(row => {
