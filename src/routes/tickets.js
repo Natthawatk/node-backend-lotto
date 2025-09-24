@@ -25,7 +25,8 @@ router.get('/tickets/for-sale', auth(false), async (req, res, next) => {
         'SELECT id, number_6, price, round_date FROM ticket WHERE status="available" AND DATE(round_date)=? ORDER BY number_6',
         [round]
       );
-      res.json({ round_date: round, tickets: rows });
+      const roundDate = rows.length > 0 ? rows[0].display_round_date : null;
+      res.json({ round_date: roundDate, tickets: rows });
     } else {
       // Get tickets for the next selling round (latest draw_date + 1 day)
       const [latestDraw] = await conn.query('SELECT MAX(draw_date) as latest_draw_date FROM draw');
