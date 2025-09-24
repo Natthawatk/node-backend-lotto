@@ -60,10 +60,6 @@ router.get('/draws/latest-results', auth(false), async (req, res, next) => {
       return res.json({ draw: null, results: [], round_date: null });
     }
 
-    // Calculate display date: if time is 00:00:00, show next day
-    const originalDate = new Date(draws[0].original_draw_date);
-    let displayDate = new Date(originalDate);
-
     // Format as YYYY-MM-DD
     const roundDate = displayDate.toISOString().split('T')[0];
 
