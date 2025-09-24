@@ -125,7 +125,7 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
                  t.id AS ticket_id,
                  t.number_6, 
                  t.status AS ticket_status,
-                 t.round_date AS original_round_date,
+                 DATE(t.round_date) AS ticket_round_date,
                  p.purchase_price, 
                  p.purchased_at,
                  CASE 
@@ -152,18 +152,12 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
     const [rows] = await pool.query(sql, params);
 
     // Get latest draw ID and date (force UTC and format consistently)
-    const [latestDrawResult] = await pool.query('SELECT id as latest_draw_id, draw_date FROM draw ORDER BY id DESC LIMIT 1');
+    const [latestDrawResult] = await pool.query(`
+      SELECT id as latest_draw_id, DATE(draw_date) AS latest_draw_date
+      FROM draw ORDER BY id DESC LIMIT 1
+    `);
     const latestDrawId = latestDrawResult[0]?.latest_draw_id || null;
-    let latestDrawDate = null;
-    
-    if (latestDrawResult[0]?.draw_date) {
-      // Apply same logic as ticket round_date: if time is 00:00:00, show next day
-      const originalDrawDate = new Date(latestDrawResult[0].draw_date);
-      let displayDrawDate = new Date(originalDrawDate);
-      
-      // Format as YYYY-MM-DD
-      latestDrawDate = displayDrawDate.toISOString().split('T')[0];
-    }
+    const latestDrawDate = latestDrawResult[0]?.latest_draw_date || null;
     
     console.log('🎯 Latest draw info:', { latestDrawId, latestDrawDate, rawDate: latestDrawResult[0]?.draw_date });
 
@@ -177,7 +171,7 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
           ticket_id: row.ticket_id,
           number_6: row.number_6,
           ticket_status: row.ticket_status,
-          original_round_date: row.original_round_date,
+          ticket_round_date: row.ticket_round_date,
           purchase_price: row.purchase_price,
           purchased_at: row.purchased_at,
           redemption_id: row.redemption_id,
@@ -203,14 +197,7 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
       const originalDate = new Date(ticket.original_round_date);
       let displayDate = new Date(originalDate);
 
-      // Check if time is 00:00:00
-      if (originalDate.getHours() === 0 && originalDate.getMinutes() === 0 && originalDate.getSeconds() === 0) {
-        // Add 1 day
-        displayDate.setDate(displayDate.getDate() + 1);
-      }
-
-      // Format as YYYY-MM-DD
-      const roundDate = displayDate.toISOString().split('T')[0];
+      const roundDate = ticket.ticket_round_date;
       const canCheck = roundDate === latestDrawDate;
       
       // Determine result status
@@ -227,6 +214,8 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
       const totalWinningAmount = ticket.prizes.reduce((sum, prize) => sum + (prize.winning_amount || 0), 0);
       
       console.log(`🎫 Ticket ${ticket.number_6}: roundDate="${roundDate}", latestDrawDate="${latestDrawDate}", canCheck=${canCheck}, prizes=${ticket.prizes.length}`);
+      console.log('DB ticket_round_date ->', row.ticket_round_date);
+      console.log('latestDrawDate ->', latestDrawDate);
 
       return {
         purchase_id: ticket.purchase_id,
