@@ -46,7 +46,11 @@ router.get('/tickets/for-sale', auth(false), async (req, res, next) => {
         `, [latestDrawDate]);
 
         console.log('🎯 Found tickets:', rows.length);
-        console.log('🎯 Expected round date:', new Date(new Date(latestDrawDate).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        console.log(
+          '🎯 Expected round date:',
+          new Date(latestDrawDate).toISOString().split('T')[0]
+        );
+
 
         const roundDate = rows.length > 0 ? rows[0].display_round_date : null;
         res.json({ round_date: roundDate, tickets: rows });
