@@ -28,39 +28,47 @@ router.get('/tickets/for-sale', auth(false), async (req, res, next) => {
       const roundDate = rows.length > 0 ? rows[0].display_round_date : null;
       res.json({ round_date: roundDate, tickets: rows });
     } else {
-      // Get tickets for the next selling round (latest draw_date + 1 day)
-      const [latestDraw] = await conn.query('SELECT MAX(draw_date) as latest_draw_date FROM draw');
+      // ✅ ดึง draw ล่าสุดตาม id
+      const [latestDraw] = await conn.query(`
+        SELECT id, DATE(draw_date) AS latest_draw_date 
+        FROM draw 
+        ORDER BY id DESC 
+        LIMIT 1
+      `);
       console.log('🎯 Latest draw:', latestDraw[0]);
 
       if (latestDraw.length && latestDraw[0].latest_draw_date) {
+        const latestDrawId = latestDraw[0].id;
         const latestDrawDate = latestDraw[0].latest_draw_date;
-        console.log('🎯 Latest draw date:', latestDrawDate);
-
-        // Get tickets where round_date = latest_draw_date + 1 day
+        console.log('🎯 Latest draw ID:', latestDrawId, 'Date:', latestDrawDate);
+  
+        // ✅ ดึงตั๋วงวดถัดจาก draw ล่าสุด
         const [rows] = await conn.query(`
-          SELECT id, number_6, price, round_date, DATE(round_date) as display_round_date
-          FROM ticket 
-          WHERE status="available" 
-          AND DATE(round_date) > DATE(?)
+          SELECT 
+            id, 
+            number_6, 
+            price, 
+            round_date, 
+            DATE(round_date) AS display_round_date
+          FROM ticket
+          WHERE status="available"
+            AND DATE(round_date) = DATE_ADD(?, INTERVAL 1 DAY)
           ORDER BY number_6
         `, [latestDrawDate]);
-
+  
         console.log('🎯 Found tickets:', rows.length);
-        console.log(
-          '🎯 Expected round date:',
-          new Date(latestDrawDate).toISOString().split('T')[0]
-        );
-
-
+        console.log('🎯 Expected round date:', new Date(new Date(latestDrawDate).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  
         const roundDate = rows.length > 0 ? rows[0].display_round_date : null;
-        res.json({ round_date: roundDate, tickets: rows });
-      } else {
-        console.log('🎯 No draws found in database');
-        // No draws yet, return empty
-        res.json({ round_date: null, tickets: [] });
-      }
-    }
-  } catch (e) { next(e); }
+        return res.json({ round_date: roundDate, tickets: rows });
+      }  
+
+      console.log('🎯 No draws found in database');
+      return res.json({ round_date: null, tickets: [] });
+
+  } catch (e) { 
+    next(e); 
+  }
 });
 
 // GET /tickets/my-stats - Get user's ticket statistics
