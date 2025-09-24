@@ -156,12 +156,6 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
       const originalDrawDate = new Date(latestDrawResult[0].draw_date);
       let displayDrawDate = new Date(originalDrawDate);
       
-      // Check if time is 00:00:00
-      if (originalDrawDate.getHours() === 0 && originalDrawDate.getMinutes() === 0 && originalDrawDate.getSeconds() === 0) {
-        // Add 1 day
-        displayDrawDate.setDate(displayDrawDate.getDate() + 1);
-      }
-      
       // Format as YYYY-MM-DD
       latestDrawDate = displayDrawDate.toISOString().split('T')[0];
     }
