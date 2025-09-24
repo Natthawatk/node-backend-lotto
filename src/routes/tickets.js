@@ -19,20 +19,27 @@ router.get('/tickets/for-sale', auth(false), async (req, res, next) => {
     const conn = pool;
 
     if (req.query.roundDate) {
-      // If specific round date is requested, use it
+      // ✅ ใช้วันที่ที่ผู้ใช้ส่งมา (เปรียบเทียบแบบ DATE ไม่สนเวลา)
       const round = req.query.roundDate;
-      const [rows] = await conn.query(
-        'SELECT id, number_6, price, round_date FROM ticket WHERE status="available" AND DATE(round_date)=? ORDER BY number_6',
-        [round]
-      );
-      const roundDate = rows.length > 0 ? rows[0].display_round_date : null;
-      res.json({ round_date: roundDate, tickets: rows });
+      const [rows] = await conn.query(`
+        SELECT 
+          id, number_6, price, round_date,
+          DATE(round_date) AS display_round_date
+        FROM ticket
+        WHERE status = 'available'
+          AND DATE(round_date) = DATE(?)
+        ORDER BY number_6
+      `, [round]);
+
+      const roundDate = rows.length > 0 ? rows[0].display_round_date : round;
+      return res.json({ round_date: roundDate, tickets: rows });
+
     } else {
-      // ✅ ดึง draw ล่าสุดตาม id
+      // ✅ ใช้ draw ล่าสุดตาม id (ถูกต้องกว่า MAX(draw_date))
       const [latestDraw] = await conn.query(`
-        SELECT id, DATE(draw_date) AS latest_draw_date 
-        FROM draw 
-        ORDER BY id DESC 
+        SELECT id, DATE(draw_date) AS latest_draw_date
+        FROM draw
+        ORDER BY id DESC
         LIMIT 1
       `);
       console.log('🎯 Latest draw:', latestDraw[0]);
@@ -41,33 +48,30 @@ router.get('/tickets/for-sale', auth(false), async (req, res, next) => {
         const latestDrawId = latestDraw[0].id;
         const latestDrawDate = latestDraw[0].latest_draw_date;
         console.log('🎯 Latest draw ID:', latestDrawId, 'Date:', latestDrawDate);
-  
-        // ✅ ดึงตั๋วงวดถัดจาก draw ล่าสุด
+
+        // ✅ ตั๋วงวดถัดไปจากวันที่จับรางวัลล่าสุด (ใช้ DATE() กันเวลา)
         const [rows] = await conn.query(`
           SELECT 
-            id, 
-            number_6, 
-            price, 
-            round_date, 
+            id, number_6, price, round_date,
             DATE(round_date) AS display_round_date
           FROM ticket
-          WHERE status="available"
+          WHERE status = 'available'
             AND DATE(round_date) = DATE_ADD(?, INTERVAL 1 DAY)
           ORDER BY number_6
         `, [latestDrawDate]);
-  
+
         console.log('🎯 Found tickets:', rows.length);
-        console.log('🎯 Expected round date:', new Date(new Date(latestDrawDate).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  
+        console.log('🎯 Expected round date:', latestDrawDate); // แค่ log วันฐาน (SQL เป็นคน +1 แล้ว)
+
         const roundDate = rows.length > 0 ? rows[0].display_round_date : null;
         return res.json({ round_date: roundDate, tickets: rows });
-      }  
+      }
 
       console.log('🎯 No draws found in database');
       return res.json({ round_date: null, tickets: [] });
-
-  } catch (e) { 
-    next(e); 
+    }
+  } catch (e) {
+    next(e);
   }
 });
 
