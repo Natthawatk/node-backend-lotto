@@ -41,7 +41,7 @@ router.get('/tickets/for-sale', auth(false), async (req, res, next) => {
           SELECT id, number_6, price, round_date, DATE(round_date) as display_round_date
           FROM ticket 
           WHERE status="available" 
-          AND DATE(round_date) = DATE_ADD(DATE(?), INTERVAL 1 DAY)
+          AND DATE(round_date) > DATE(?)
           ORDER BY number_6
         `, [latestDrawDate]);
 
@@ -125,7 +125,7 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
                  t.id AS ticket_id,
                  t.number_6, 
                  t.status AS ticket_status,
-                 p.round_date AS original_round_date,
+                 t.round_date AS original_round_date,
                  p.purchase_price, 
                  p.purchased_at,
                  CASE 
