@@ -193,6 +193,14 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
 
     // Process each grouped ticket
     const processedRows = Object.values(ticketGroups).map(ticket => {
+      console.log('DB ticket_round_date ->', ticket.ticket_round_date);
+      console.log('Latest draw date ->', latestDrawDate);
+
+      // ✅ แปลงเป็น YYYY-MM-DD ก่อนเปรียบเทียบ
+      const roundDateStr = new Date(ticket.ticket_round_date).toISOString().split('T')[0];
+      const latestDrawStr = new Date(latestDrawDate).toISOString().split('T')[0];
+      const canCheck = roundDateStr === latestDrawStr;
+          
       // Calculate display date: if time is 00:00:00, show next day
       const originalDate = new Date(ticket.original_round_date);
       let displayDate = new Date(originalDate);
@@ -213,9 +221,7 @@ router.get('/tickets/mine', auth(true), async (req, res, next) => {
       // Calculate total winning amount
       const totalWinningAmount = ticket.prizes.reduce((sum, prize) => sum + (prize.winning_amount || 0), 0);
       
-      console.log(`🎫 Ticket ${ticket.number_6}: roundDate="${roundDate}", latestDrawDate="${latestDrawDate}", canCheck=${canCheck}, prizes=${ticket.prizes.length}`);
-      console.log('DB ticket_round_date ->', row.ticket_round_date);
-      console.log('latestDrawDate ->', latestDrawDate);
+      console.log(`🎫 Ticket ${ticket.number_6}: roundDate="${roundDate}", latestDrawDate="${latestDrawDate}", canCheck=${canCheck}, prizes=${ticket.prizes.length}`);;
 
       return {
         purchase_id: ticket.purchase_id,
