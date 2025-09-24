@@ -46,6 +46,6 @@ app.use('/', prizeRoutes);
 app.use('/admin', adminRoutes);
 
 // (ถ้าจะทดสอบ DB ค่อยเติมให้หลังจากนี้)
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`API on :${PORT}`));
 const pool = require('./db');   // ใส่หลัง require(...) อื่น ๆ
