@@ -64,12 +64,6 @@ router.get('/draws/latest-results', auth(false), async (req, res, next) => {
     const originalDate = new Date(draws[0].original_draw_date);
     let displayDate = new Date(originalDate);
 
-    // Check if time is 00:00:00
-    if (originalDate.getHours() === 0 && originalDate.getMinutes() === 0 && originalDate.getSeconds() === 0) {
-      // Add 1 day
-      displayDate.setDate(displayDate.getDate() + 1);
-    }
-
     // Format as YYYY-MM-DD
     const roundDate = displayDate.toISOString().split('T')[0];
 
